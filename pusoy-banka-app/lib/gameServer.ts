@@ -3,6 +3,7 @@ import { dealHands } from "./deck";
 import { buildPlayerHand } from "./scoring";
 import { scoreRoundWithSpecials } from "./scoring";
 import { getBankaSeatForRound } from "./scoring";
+import { autoArrange } from "./botArranger";
 import { Card, PlayerArrangement } from "./types";
 
 export function generateRoomCode(): string {
@@ -16,7 +17,7 @@ export function generateRoomCode(): string {
 export async function dealRound(roomId: string, roundNumber: number) {
   const { data: players, error: playersErr } = await supabase
     .from("players")
-    .select("id, seat")
+    .select("id, seat, is_bot")
     .eq("room_id", roomId)
     .order("seat", { ascending: true });
   if (playersErr) throw playersErr;
@@ -24,13 +25,29 @@ export async function dealRound(roomId: string, roundNumber: number) {
 
   const hands = dealHands(); // [Card[], Card[], Card[], Card[]] indexed by seat 0-3
 
-  const rows = players.map((p) => ({
-    room_id: roomId,
-    round_number: roundNumber,
-    player_id: p.id,
-    dealt_cards: hands[p.seat],
-    submitted: false,
-  }));
+  const rows = players.map((p) => {
+    const dealt = hands[p.seat];
+    if (p.is_bot) {
+      const arrangement = autoArrange(dealt);
+      return {
+        room_id: roomId,
+        round_number: roundNumber,
+        player_id: p.id,
+        dealt_cards: dealt,
+        front: arrangement.front,
+        middle: arrangement.middle,
+        back: arrangement.back,
+        submitted: true,
+      };
+    }
+    return {
+      room_id: roomId,
+      round_number: roundNumber,
+      player_id: p.id,
+      dealt_cards: dealt,
+      submitted: false,
+    };
+  });
 
   const { error: insertErr } = await supabase.from("round_hands").insert(rows);
   if (insertErr) throw insertErr;
