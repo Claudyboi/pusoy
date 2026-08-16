@@ -26,6 +26,22 @@ export default function Home() {
     router.push(`/room/${data.room.room_code}`);
   }
 
+  async function playSolo() {
+    if (!name.trim()) return setError("Enter your name first");
+    setLoading(true);
+    setError("");
+    const res = await fetch("/api/rooms/solo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) return setError(data.error);
+    localStorage.setItem(`pusoy-player-${data.room.room_code}`, data.player.id);
+    router.push(`/room/${data.room.room_code}`);
+  }
+
   async function joinRoom() {
     if (!name.trim()) return setError("Enter your name first");
     if (!joinCode.trim()) return setError("Enter a room code");
@@ -47,7 +63,7 @@ export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-neutral-950 text-neutral-100 p-6">
       <div className="w-full max-w-sm space-y-6">
-        <h1 className="text-3xl font-bold text-center">Pusoy Banka</h1>
+        <h1 className="text-3xl font-bold text-center">Piyat-Piyat</h1>
 
         <input
           className="w-full rounded-lg bg-neutral-800 px-4 py-3 outline-none border border-neutral-700 focus:border-neutral-400"
@@ -62,6 +78,14 @@ export default function Home() {
           className="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 py-3 font-semibold disabled:opacity-50"
         >
           Create a room
+        </button>
+
+        <button
+          onClick={playSolo}
+          disabled={loading}
+          className="w-full rounded-lg bg-neutral-800 hover:bg-neutral-700 py-3 font-semibold disabled:opacity-50 border border-neutral-700"
+        >
+          Play solo (vs 3 bots)
         </button>
 
         <div className="flex items-center gap-3 text-neutral-500">
